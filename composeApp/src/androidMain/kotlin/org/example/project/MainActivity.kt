@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -110,9 +111,13 @@ fun TranslationApp() {
     var targetDropdownExpanded by remember { mutableStateOf(false) }
 
     var currentTranslator by remember { mutableStateOf<Translator?>(null) }
+    var isModelReady by remember { mutableStateOf(false) }
+    var isModelDownloading by remember { mutableStateOf(false) }
 
     DisposableEffect(sourceLanguage, targetLanguage) {
         currentTranslator?.close()
+        isModelReady = false
+        isModelDownloading = true
 
         val translatorOptions = TranslatorOptions.Builder()
             .setSourceLanguage(sourceLanguage.mlKitCode)
@@ -123,8 +128,13 @@ fun TranslationApp() {
         currentTranslator = newTranslator
 
         newTranslator.downloadModelIfNeeded()
-            .addOnSuccessListener { }
+            .addOnSuccessListener {
+                isModelReady = true
+                isModelDownloading = false
+            }
             .addOnFailureListener { e ->
+                isModelReady = false
+                isModelDownloading = false
                 errorMessage = "Failed to download translation model: ${e.message}"
             }
 
@@ -203,6 +213,12 @@ fun TranslationApp() {
             recordAudioPermissionState.launchPermissionRequest()
             return
         }
+
+        if (!isModelReady) {
+            errorMessage = "Model downloading, please wait..."
+            return
+        }
+
         errorMessage = ""
         isTranslating = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -294,6 +310,23 @@ fun TranslationApp() {
                 }
             }
 
+            if (isModelDownloading) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Text(
+                        text = "Downloading translation model...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            }
+
             if (errorMessage.isNotEmpty()) {
                 Text(
                     text = errorMessage,
@@ -330,11 +363,13 @@ fun TranslationApp() {
                 ) {
                     IconButton(
                         onClick = { if (isListening) stopListening() else startListening() },
+                        enabled = !isModelDownloading,
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape)
                             .background(
                                 if (isListening) MaterialTheme.colorScheme.errorContainer
+                                else if (isModelDownloading) MaterialTheme.colorScheme.surfaceVariant
                                 else MaterialTheme.colorScheme.primaryContainer
                             )
                     ) {
@@ -343,6 +378,7 @@ fun TranslationApp() {
                             contentDescription = if (isListening) "Stop" else "Start",
                             modifier = Modifier.size(60.dp),
                             tint = if (isListening) MaterialTheme.colorScheme.error
+                            else if (isModelDownloading) MaterialTheme.colorScheme.onSurfaceVariant
                             else MaterialTheme.colorScheme.primary
                         )
                     }
@@ -350,6 +386,7 @@ fun TranslationApp() {
 
                 Text(
                     text = when {
+                        isModelDownloading -> "Model downloading, please wait..."
                         isListening -> "Listening..."
                         isTranslating -> "Translating..."
                         else -> "Tap microphone to speak"
