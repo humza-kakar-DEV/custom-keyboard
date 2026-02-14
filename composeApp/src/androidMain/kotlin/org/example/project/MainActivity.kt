@@ -117,7 +117,6 @@ fun TranslationApp() {
     DisposableEffect(sourceLanguage, targetLanguage) {
         currentTranslator?.close()
         isModelReady = false
-        isModelDownloading = true
 
         val translatorOptions = TranslatorOptions.Builder()
             .setSourceLanguage(sourceLanguage.mlKitCode)
@@ -126,17 +125,6 @@ fun TranslationApp() {
 
         val newTranslator = Translation.getClient(translatorOptions)
         currentTranslator = newTranslator
-
-        newTranslator.downloadModelIfNeeded()
-            .addOnSuccessListener {
-                isModelReady = true
-                isModelDownloading = false
-            }
-            .addOnFailureListener { e ->
-                isModelReady = false
-                isModelDownloading = false
-                errorMessage = "Failed to download translation model: ${e.message}"
-            }
 
         onDispose { newTranslator.close() }
     }
@@ -208,18 +196,7 @@ fun TranslationApp() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    fun startListening() {
-        if (!recordAudioPermissionState.status.isGranted) {
-            recordAudioPermissionState.launchPermissionRequest()
-            return
-        }
-
-        if (!isModelReady) {
-            errorMessage = "Model downloading, please wait..."
-            return
-        }
-
-        errorMessage = ""
+    fun startSpeechRecognition() {
         isTranslating = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
@@ -227,6 +204,32 @@ fun TranslationApp() {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, sourceLanguage.code)
         }
         speechRecognizer.startListening(intent)
+    }
+
+    fun downloadModelAndStartListening() {
+        if (!recordAudioPermissionState.status.isGranted) {
+            recordAudioPermissionState.launchPermissionRequest()
+            return
+        }
+
+        errorMessage = ""
+
+        if (isModelReady) {
+            startSpeechRecognition()
+            return
+        }
+
+        isModelDownloading = true
+        currentTranslator?.downloadModelIfNeeded()
+            ?.addOnSuccessListener {
+                isModelReady = true
+                isModelDownloading = false
+                startSpeechRecognition()
+            }
+            ?.addOnFailureListener { e ->
+                isModelDownloading = false
+                errorMessage = "Failed to download translation model: ${e.message}"
+            }
     }
 
     fun stopListening() {
@@ -273,6 +276,7 @@ fun TranslationApp() {
                                 text = { Text(language.name) },
                                 onClick = {
                                     sourceLanguage = language
+                                    isModelReady = false
                                     sourceDropdownExpanded = false
                                 }
                             )
@@ -302,6 +306,7 @@ fun TranslationApp() {
                                 text = { Text(language.name) },
                                 onClick = {
                                     targetLanguage = language
+                                    isModelReady = false
                                     targetDropdownExpanded = false
                                 }
                             )
@@ -362,7 +367,7 @@ fun TranslationApp() {
                     modifier = Modifier.padding(bottom = 32.dp)
                 ) {
                     IconButton(
-                        onClick = { if (isListening) stopListening() else startListening() },
+                        onClick = { if (isListening) stopListening() else downloadModelAndStartListening() },
                         enabled = !isModelDownloading,
                         modifier = Modifier
                             .size(120.dp)
