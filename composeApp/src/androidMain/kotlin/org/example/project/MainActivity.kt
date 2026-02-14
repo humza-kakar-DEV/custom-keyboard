@@ -1,11 +1,59 @@
 package org.example.project
 
+import android.Manifest
+import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.mlkit.nl.translate.TranslateLanguage
+import com.google.mlkit.nl.translate.Translation
+import com.google.mlkit.nl.translate.Translator
+import com.google.mlkit.nl.translate.TranslatorOptions
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -13,13 +61,333 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            App()
+            MaterialTheme {
+                TranslationApp()
+            }
         }
     }
 }
 
-@Preview
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun AppAndroidPreview() {
-    App()
+fun TranslationApp() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val recordAudioPermissionState = rememberPermissionState(
+        Manifest.permission.RECORD_AUDIO
+    )
+
+    var isListening by remember { mutableStateOf(false) }
+    var recognizedText by remember { mutableStateOf("") }
+    var translatedText by remember { mutableStateOf("") }
+    var isTranslating by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
+
+    val translatorOptions = remember {
+        TranslatorOptions.Builder()
+            .setSourceLanguage(TranslateLanguage.ENGLISH)
+            .setTargetLanguage(TranslateLanguage.SPANISH)
+            .build()
+    }
+
+    val translator = remember { Translation.getClient(translatorOptions) }
+
+    DisposableEffect(translator) {
+        translator.downloadModelIfNeeded()
+            .addOnSuccessListener { }
+            .addOnFailureListener { e ->
+                errorMessage = "Failed to download translation model: ${e.message}"
+            }
+
+        onDispose {
+            translator.close()
+        }
+    }
+
+    val recognitionListener = remember {
+        object : RecognitionListener {
+            override fun onReadyForSpeech(params: Bundle?) {
+                isListening = true
+            }
+
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+
+            override fun onEndOfSpeech() {
+                isListening = false
+            }
+
+            override fun onError(error: Int) {
+                isListening = false
+                val message = when (error) {
+                    SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+                    SpeechRecognizer.ERROR_CLIENT -> "Client side error"
+                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
+                    SpeechRecognizer.ERROR_NETWORK -> "Network error"
+                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+                    SpeechRecognizer.ERROR_NO_MATCH -> "No speech recognized"
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognition service busy"
+                    SpeechRecognizer.ERROR_SERVER -> "Server error"
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input"
+                    else -> "Unknown error"
+                }
+                errorMessage = message
+            }
+
+            override fun onResults(results: Bundle?) {
+                isListening = false
+                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    recognizedText = matches[0]
+                    translateText(matches[0], translator) { translated ->
+                        translatedText = translated
+                        isTranslating = false
+                    }
+                }
+            }
+
+            override fun onPartialResults(partialResults: Bundle?) {
+                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                if (!matches.isNullOrEmpty()) {
+                    recognizedText = matches[0]
+                }
+            }
+
+            override fun onEvent(eventType: Int, params: Bundle?) {}
+        }
+    }
+
+    DisposableEffect(speechRecognizer) {
+        speechRecognizer.setRecognitionListener(recognitionListener)
+
+        onDispose {
+            speechRecognizer.destroy()
+        }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                if (isListening) {
+                    speechRecognizer.stopListening()
+                    isListening = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    fun startListening() {
+        if (!recordAudioPermissionState.status.isGranted) {
+            recordAudioPermissionState.launchPermissionRequest()
+            return
+        }
+
+        errorMessage = null
+        isTranslating = true
+
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        }
+
+        speechRecognizer.startListening(intent)
+    }
+
+    fun stopListening() {
+        speechRecognizer.stopListening()
+        isListening = false
+    }
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize()
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Live Translation",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+
+            AnimatedVisibility(
+                visible = errorMessage != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Text(
+                    text = errorMessage ?: "",
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            }
+
+            if (!recordAudioPermissionState.status.isGranted) {
+                Text(
+                    text = "Microphone permission is required for speech translation",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                IconButton(
+                    onClick = { recordAudioPermissionState.launchPermissionRequest() },
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = "Request Permission",
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            } else {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(bottom = 32.dp)
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (isListening) {
+                                stopListening()
+                            } else {
+                                startListening()
+                            }
+                        },
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isListening)
+                                    MaterialTheme.colorScheme.errorContainer
+                                else
+                                    MaterialTheme.colorScheme.primaryContainer
+                            )
+                    ) {
+                        Icon(
+                            imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
+                            contentDescription = if (isListening) "Stop Listening" else "Start Listening",
+                            modifier = Modifier.size(60.dp),
+                            tint = if (isListening)
+                                MaterialTheme.colorScheme.error
+                            else
+                                MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    if (isListening) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(140.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 3.dp
+                        )
+                    }
+                }
+
+                Text(
+                    text = when {
+                        isListening -> "Listening..."
+                        isTranslating -> "Translating..."
+                        else -> "Tap microphone to speak"
+                    },
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
+
+                AnimatedVisibility(
+                    visible = recognizedText.isNotEmpty(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Recognized:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = recognizedText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = translatedText.isNotEmpty(),
+                    enter = fadeIn(),
+                    exit = fadeOut()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp)
+                            .background(
+                                MaterialTheme.colorScheme.secondaryContainer,
+                                shape = MaterialTheme.shapes.medium
+                            )
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Translation (English → Spanish):",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = translatedText,
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 8.dp),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = "Speaking: Auto-detect → Spanish",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun translateText(
+    text: String,
+    translator: Translator,
+    onResult: (String) -> Unit
+) {
+    translator.translate(text)
+        .addOnSuccessListener { translatedText ->
+            onResult(translatedText)
+        }
+        .addOnFailureListener { exception ->
+            onResult("Translation error: ${exception.message}")
+        }
 }
