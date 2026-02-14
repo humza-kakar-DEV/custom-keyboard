@@ -9,9 +9,6 @@ import android.speech.SpeechRecognizer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -59,7 +55,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-
         setContent {
             MaterialTheme {
                 TranslationApp()
@@ -74,15 +69,13 @@ fun TranslationApp() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val recordAudioPermissionState = rememberPermissionState(
-        Manifest.permission.RECORD_AUDIO
-    )
+    val recordAudioPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
 
     var isListening by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
     var translatedText by remember { mutableStateOf("") }
     var isTranslating by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var errorMessage by remember { mutableStateOf("") }
 
     val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
 
@@ -109,21 +102,15 @@ fun TranslationApp() {
 
     val recognitionListener = remember {
         object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                isListening = true
-            }
-
+            override fun onReadyForSpeech(params: Bundle?) { isListening = true }
             override fun onBeginningOfSpeech() {}
             override fun onRmsChanged(rmsdB: Float) {}
             override fun onBufferReceived(buffer: ByteArray?) {}
-
-            override fun onEndOfSpeech() {
-                isListening = false
-            }
+            override fun onEndOfSpeech() { isListening = false }
 
             override fun onError(error: Int) {
                 isListening = false
-                val message = when (error) {
+                errorMessage = when (error) {
                     SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
                     SpeechRecognizer.ERROR_CLIENT -> "Client side error"
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
@@ -135,7 +122,6 @@ fun TranslationApp() {
                     SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "No speech input"
                     else -> "Unknown error"
                 }
-                errorMessage = message
             }
 
             override fun onResults(results: Bundle?) {
@@ -163,25 +149,18 @@ fun TranslationApp() {
 
     DisposableEffect(speechRecognizer) {
         speechRecognizer.setRecognitionListener(recognitionListener)
-
-        onDispose {
-            speechRecognizer.destroy()
-        }
+        onDispose { speechRecognizer.destroy() }
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                if (isListening) {
-                    speechRecognizer.stopListening()
-                    isListening = false
-                }
+            if (event == Lifecycle.Event.ON_PAUSE && isListening) {
+                speechRecognizer.stopListening()
+                isListening = false
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     fun startListening() {
@@ -190,15 +169,13 @@ fun TranslationApp() {
             return
         }
 
-        errorMessage = null
+        errorMessage = ""
         isTranslating = true
-
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
         }
-
         speechRecognizer.startListening(intent)
     }
 
@@ -207,9 +184,7 @@ fun TranslationApp() {
         isListening = false
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize()
-    ) { paddingValues ->
+    Scaffold(modifier = Modifier.fillMaxSize()) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -224,13 +199,9 @@ fun TranslationApp() {
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            AnimatedVisibility(
-                visible = errorMessage != null,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
+            if (errorMessage.isNotEmpty()) {
                 Text(
-                    text = errorMessage ?: "",
+                    text = errorMessage,
                     color = MaterialTheme.colorScheme.error,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 16.dp)
@@ -239,7 +210,7 @@ fun TranslationApp() {
 
             if (!recordAudioPermissionState.status.isGranted) {
                 Text(
-                    text = "Microphone permission is required for speech translation",
+                    text = "Microphone permission required",
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -263,39 +234,21 @@ fun TranslationApp() {
                     modifier = Modifier.padding(bottom = 32.dp)
                 ) {
                     IconButton(
-                        onClick = {
-                            if (isListening) {
-                                stopListening()
-                            } else {
-                                startListening()
-                            }
-                        },
+                        onClick = { if (isListening) stopListening() else startListening() },
                         modifier = Modifier
                             .size(120.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isListening)
-                                    MaterialTheme.colorScheme.errorContainer
-                                else
-                                    MaterialTheme.colorScheme.primaryContainer
+                                if (isListening) MaterialTheme.colorScheme.errorContainer
+                                else MaterialTheme.colorScheme.primaryContainer
                             )
                     ) {
                         Icon(
                             imageVector = if (isListening) Icons.Default.Stop else Icons.Default.Mic,
-                            contentDescription = if (isListening) "Stop Listening" else "Start Listening",
+                            contentDescription = if (isListening) "Stop" else "Start",
                             modifier = Modifier.size(60.dp),
-                            tint = if (isListening)
-                                MaterialTheme.colorScheme.error
-                            else
-                                MaterialTheme.colorScheme.primary
-                        )
-                    }
-
-                    if (isListening) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(140.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 3.dp
+                            tint = if (isListening) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -310,11 +263,7 @@ fun TranslationApp() {
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 
-                AnimatedVisibility(
-                    visible = recognizedText.isNotEmpty(),
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
+                if (recognizedText.isNotEmpty()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -335,11 +284,7 @@ fun TranslationApp() {
                     }
                 }
 
-                AnimatedVisibility(
-                    visible = translatedText.isNotEmpty(),
-                    enter = fadeIn(),
-                    exit = fadeOut()
-                ) {
+                if (translatedText.isNotEmpty()) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -384,10 +329,6 @@ private fun translateText(
     onResult: (String) -> Unit
 ) {
     translator.translate(text)
-        .addOnSuccessListener { translatedText ->
-            onResult(translatedText)
-        }
-        .addOnFailureListener { exception ->
-            onResult("Translation error: ${exception.message}")
-        }
+        .addOnSuccessListener { onResult(it) }
+        .addOnFailureListener { onResult("Translation error: ${it.message}") }
 }
