@@ -85,7 +85,8 @@ val supportedLanguages = listOf(
     Language("hi", "Hindi", TranslateLanguage.HINDI),
     Language("tr", "Turkish", TranslateLanguage.TURKISH),
     Language("pl", "Polish", TranslateLanguage.POLISH),
-    Language("nl", "Dutch", TranslateLanguage.DUTCH)
+    Language("nl", "Dutch", TranslateLanguage.DUTCH),
+    Language("ur", "Urdu", TranslateLanguage.URDU)
 )
 
 @OptIn(ExperimentalPermissionsApi::class)
