@@ -16,6 +16,7 @@ material3 = "1.10.0-alpha05"
 mlkit-translate = "17.0.3"
 mlkit-language-id = "17.0.6"
 accompanist-permissions = "0.35.0-alpha"
+material-icons = "1.7.8"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -35,6 +36,7 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
 compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "material-icons" }
 
 mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlkit-translate" }
 mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlkit-language-id" }

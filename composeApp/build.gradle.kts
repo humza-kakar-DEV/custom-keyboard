@@ -29,6 +29,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.material.icons.extended)
 
             implementation(libs.mlkit.translate)
             implementation(libs.mlkit.language.id)
