@@ -13,18 +13,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,7 +55,6 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
-import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +67,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+data class Language(val code: String, val name: String, val mlKitCode: String)
+
+val supportedLanguages = listOf(
+    Language("en", "English", TranslateLanguage.ENGLISH),
+    Language("es", "Spanish", TranslateLanguage.SPANISH),
+    Language("fr", "French", TranslateLanguage.FRENCH),
+    Language("de", "German", TranslateLanguage.GERMAN),
+    Language("it", "Italian", TranslateLanguage.ITALIAN),
+    Language("pt", "Portuguese", TranslateLanguage.PORTUGUESE),
+    Language("ru", "Russian", TranslateLanguage.RUSSIAN),
+    Language("zh", "Chinese", TranslateLanguage.CHINESE),
+    Language("ja", "Japanese", TranslateLanguage.JAPANESE),
+    Language("ko", "Korean", TranslateLanguage.KOREAN),
+    Language("ar", "Arabic", TranslateLanguage.ARABIC),
+    Language("hi", "Hindi", TranslateLanguage.HINDI),
+    Language("tr", "Turkish", TranslateLanguage.TURKISH),
+    Language("pl", "Polish", TranslateLanguage.POLISH),
+    Language("nl", "Dutch", TranslateLanguage.DUTCH)
+)
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -77,28 +102,35 @@ fun TranslationApp() {
     var isTranslating by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
 
-    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
+    var sourceLanguage by remember { mutableStateOf(supportedLanguages[0]) }
+    var targetLanguage by remember { mutableStateOf(supportedLanguages[1]) }
 
-    val translatorOptions = remember {
-        TranslatorOptions.Builder()
-            .setSourceLanguage(TranslateLanguage.ENGLISH)
-            .setTargetLanguage(TranslateLanguage.SPANISH)
+    var sourceDropdownExpanded by remember { mutableStateOf(false) }
+    var targetDropdownExpanded by remember { mutableStateOf(false) }
+
+    var currentTranslator by remember { mutableStateOf<Translator?>(null) }
+
+    DisposableEffect(sourceLanguage, targetLanguage) {
+        currentTranslator?.close()
+
+        val translatorOptions = TranslatorOptions.Builder()
+            .setSourceLanguage(sourceLanguage.mlKitCode)
+            .setTargetLanguage(targetLanguage.mlKitCode)
             .build()
-    }
 
-    val translator = remember { Translation.getClient(translatorOptions) }
+        val newTranslator = Translation.getClient(translatorOptions)
+        currentTranslator = newTranslator
 
-    DisposableEffect(translator) {
-        translator.downloadModelIfNeeded()
+        newTranslator.downloadModelIfNeeded()
             .addOnSuccessListener { }
             .addOnFailureListener { e ->
                 errorMessage = "Failed to download translation model: ${e.message}"
             }
 
-        onDispose {
-            translator.close()
-        }
+        onDispose { newTranslator.close() }
     }
+
+    val speechRecognizer = remember { SpeechRecognizer.createSpeechRecognizer(context) }
 
     val recognitionListener = remember {
         object : RecognitionListener {
@@ -129,9 +161,11 @@ fun TranslationApp() {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (!matches.isNullOrEmpty()) {
                     recognizedText = matches[0]
-                    translateText(matches[0], translator) { translated ->
-                        translatedText = translated
-                        isTranslating = false
+                    currentTranslator?.let { translator ->
+                        translateText(matches[0], translator) { translated ->
+                            translatedText = translated
+                            isTranslating = false
+                        }
                     }
                 }
             }
@@ -168,13 +202,12 @@ fun TranslationApp() {
             recordAudioPermissionState.launchPermissionRequest()
             return
         }
-
         errorMessage = ""
         isTranslating = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, sourceLanguage.code)
         }
         speechRecognizer.startListening(intent)
     }
@@ -196,8 +229,69 @@ fun TranslationApp() {
             Text(
                 text = "Live Translation",
                 style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 32.dp)
+                modifier = Modifier.padding(bottom = 24.dp)
             )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box {
+                    OutlinedButton(
+                        onClick = { sourceDropdownExpanded = true },
+                        modifier = Modifier.width(140.dp)
+                    ) {
+                        Text(sourceLanguage.name, maxLines = 1)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    }
+                    DropdownMenu(
+                        expanded = sourceDropdownExpanded,
+                        onDismissRequest = { sourceDropdownExpanded = false }
+                    ) {
+                        supportedLanguages.forEach { language ->
+                            DropdownMenuItem(
+                                text = { Text(language.name) },
+                                onClick = {
+                                    sourceLanguage = language
+                                    sourceDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Text(
+                    text = "→",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+
+                Box {
+                    OutlinedButton(
+                        onClick = { targetDropdownExpanded = true },
+                        modifier = Modifier.width(140.dp)
+                    ) {
+                        Text(targetLanguage.name, maxLines = 1)
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    }
+                    DropdownMenu(
+                        expanded = targetDropdownExpanded,
+                        onDismissRequest = { targetDropdownExpanded = false }
+                    ) {
+                        supportedLanguages.forEach { language ->
+                            DropdownMenuItem(
+                                text = { Text(language.name) },
+                                onClick = {
+                                    targetLanguage = language
+                                    targetDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             if (errorMessage.isNotEmpty()) {
                 Text(
@@ -271,7 +365,7 @@ fun TranslationApp() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Recognized:",
+                            text = "Recognized (${sourceLanguage.name}):",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -297,7 +391,7 @@ fun TranslationApp() {
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Translation (English → Spanish):",
+                            text = "Translation (${targetLanguage.name}):",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer
                         )
@@ -313,12 +407,6 @@ fun TranslationApp() {
             }
 
             Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = "Speaking: Auto-detect → Spanish",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
