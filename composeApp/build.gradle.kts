@@ -34,6 +34,10 @@ kotlin {
             implementation(libs.mlkit.translate)
             implementation(libs.mlkit.language.id)
             implementation(libs.accompanist.permissions)
+
+            implementation(libs.androidx.lifecycle.runtime.ktx)
+            implementation(libs.androidx.lifecycle.viewmodel.ktx)
+            implementation(libs.androidx.savedstate.ktx)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)

@@ -17,6 +17,8 @@ mlkit-translate = "17.0.3"
 mlkit-language-id = "17.0.6"
 accompanist-permissions = "0.35.0-alpha"
 material-icons = "1.7.8"
+androidx-lifecycle-android = "2.8.7"
+androidx-savedstate = "1.2.1"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -42,6 +44,10 @@ mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlkit-
 mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlkit-language-id" }
 
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist-permissions" }
+
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "androidx-lifecycle-android" }
+androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "androidx-lifecycle-android" }
+androidx-savedstate-ktx = { module = "androidx.savedstate:savedstate-ktx", version.ref = "androidx-savedstate" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
