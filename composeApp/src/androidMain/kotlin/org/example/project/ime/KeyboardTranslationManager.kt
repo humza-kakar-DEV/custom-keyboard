@@ -64,6 +64,10 @@ class KeyboardTranslationManager(
         isModelReady = false
     }
 
+    fun onLanguageChanged() {
+        loadLanguagesAndInitTranslator()
+    }
+
     fun onMicClick() {
         if (_toolbarState.value.isListening) {
             stopListening()

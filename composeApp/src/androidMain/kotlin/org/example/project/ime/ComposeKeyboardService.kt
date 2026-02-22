@@ -67,7 +67,8 @@ class ComposeKeyboardService : InputMethodService(),
             ComposeKeyboardView(
                 toolbarState = toolbarState,
                 onKeyPress = { action -> handleKeyAction(action) },
-                onMicClick = { manager.onMicClick() }
+                onMicClick = { manager.onMicClick() },
+                onLanguageChanged = { manager.onLanguageChanged() }
             )
         }
 

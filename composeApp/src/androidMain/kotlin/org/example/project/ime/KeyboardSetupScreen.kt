@@ -4,10 +4,7 @@ import android.Manifest
 import android.content.Intent
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,16 +22,12 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -58,7 +51,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
-import org.example.project.translation.supportedLanguages
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -178,7 +170,16 @@ fun KeyboardSetupScreen() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            LanguageSelectionCard()
+            SetupStepCard(
+                stepNumber = 4,
+                title = "Translation Languages",
+                description = "Tap the translate icon on the keyboard toolbar to switch source and target languages.",
+                isComplete = true,
+                buttonText = "Available",
+                onButtonClick = {},
+                buttonEnabled = false,
+                icon = Icons.Default.Translate
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -266,151 +267,4 @@ private fun SetupStepCard(
     }
 }
 
-@Composable
-private fun LanguageSelectionCard() {
-    val context = LocalContext.current
 
-    var sourceCode by remember { mutableStateOf(KeyboardPreferences.getSourceLanguageCode(context)) }
-    var targetCode by remember { mutableStateOf(KeyboardPreferences.getTargetLanguageCode(context)) }
-
-    val sourceName = supportedLanguages.find { it.code == sourceCode }?.name ?: "English"
-    val targetName = supportedLanguages.find { it.code == targetCode }?.name ?: "Urdu"
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Translate,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Column {
-                    Text(
-                        text = "Translation Languages",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Select source and target languages for voice translation.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                LanguageDropdown(
-                    label = "Source",
-                    selectedName = sourceName,
-                    selectedCode = sourceCode,
-                    onLanguageSelected = { code ->
-                        sourceCode = code
-                        KeyboardPreferences.setSourceLanguageCode(context, code)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-
-                IconButton(
-                    onClick = {
-                        val oldSource = sourceCode
-                        val oldTarget = targetCode
-                        sourceCode = oldTarget
-                        targetCode = oldSource
-                        KeyboardPreferences.setSourceLanguageCode(context, sourceCode)
-                        KeyboardPreferences.setTargetLanguageCode(context, targetCode)
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapHoriz,
-                        contentDescription = "Swap languages",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                LanguageDropdown(
-                    label = "Target",
-                    selectedName = targetName,
-                    selectedCode = targetCode,
-                    onLanguageSelected = { code ->
-                        targetCode = code
-                        KeyboardPreferences.setTargetLanguageCode(context, code)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LanguageDropdown(
-    label: String,
-    selectedName: String,
-    selectedCode: String,
-    onLanguageSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        Box {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(8.dp)
-                    )
-                    .clickable { expanded = true }
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    text = selectedName,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                supportedLanguages.forEach { language ->
-                    DropdownMenuItem(
-                        text = { Text(language.name) },
-                        onClick = {
-                            onLanguageSelected(language.code)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-    }
-}

@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +27,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun KeyboardToolbar(
     toolbarState: ToolbarState,
+    showLanguagePanel: Boolean,
+    onLanguageToggle: () -> Unit,
     onMicClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -36,12 +40,34 @@ fun KeyboardToolbar(
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Left icon: Translate / Keyboard toggle
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .clickable(onClick = onLanguageToggle),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (showLanguagePanel)
+                    Icons.Filled.Keyboard
+                else
+                    Icons.Filled.Translate,
+                contentDescription = if (showLanguagePanel) "Show keyboard" else "Language settings",
+                modifier = Modifier.size(KeyboardDimensions.toolbarIconSize),
+                tint = if (showLanguagePanel)
+                    KeyboardColors.toolbarIconActiveColor
+                else
+                    KeyboardColors.toolbarIconColor
+            )
+        }
+
         if (toolbarState.displayText.isNotEmpty()) {
             Text(
                 text = toolbarState.displayText,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(end = 8.dp),
+                    .padding(horizontal = 8.dp),
                 fontSize = 14.sp,
                 color = if (toolbarState.isListening || toolbarState.isTranslating)
                     KeyboardColors.toolbarIconActiveColor

@@ -5,18 +5,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ComposeKeyboardView(
     toolbarState: ToolbarState,
     onKeyPress: (KeyAction) -> Unit,
-    onMicClick: () -> Unit
+    onMicClick: () -> Unit,
+    onLanguageChanged: () -> Unit
 ) {
+    val context = LocalContext.current
     val keyboardState = remember { KeyboardState() }
+    var showLanguagePanel by remember { mutableStateOf(false) }
+
+    var sourceCode by remember { mutableStateOf(KeyboardPreferences.getSourceLanguageCode(context)) }
+    var targetCode by remember { mutableStateOf(KeyboardPreferences.getTargetLanguageCode(context)) }
 
     val currentRows = when (keyboardState.currentLayer) {
         KeyboardLayer.ALPHA -> qwertyAlphaRows
@@ -32,12 +43,51 @@ fun ComposeKeyboardView(
         ) {
             KeyboardToolbar(
                 toolbarState = toolbarState,
+                showLanguagePanel = showLanguagePanel,
+                onLanguageToggle = { showLanguagePanel = !showLanguagePanel },
                 onMicClick = onMicClick
             )
 
-            Column(
+            // 4 rows × (52dp key + 8dp padding) + 12dp outer padding = 252dp
+            val contentHeight = (KeyboardDimensions.keyHeight + KeyboardDimensions.keyVerticalPadding * 2) * 4 +
+                    KeyboardDimensions.keyboardVerticalPadding * 2
+
+            if (showLanguagePanel) {
+                KeyboardLanguagePanel(
+                    sourceCode = sourceCode,
+                    targetCode = targetCode,
+                    onSourceChanged = { code ->
+                        sourceCode = code
+                        KeyboardPreferences.setSourceLanguageCode(context, code)
+                        onLanguageChanged()
+                    },
+                    onTargetChanged = { code ->
+                        targetCode = code
+                        KeyboardPreferences.setTargetLanguageCode(context, code)
+                        onLanguageChanged()
+                    },
+                    onSwap = {
+                        val oldSource = sourceCode
+                        val oldTarget = targetCode
+                        sourceCode = oldTarget
+                        targetCode = oldSource
+                        KeyboardPreferences.setSourceLanguageCode(context, sourceCode)
+                        KeyboardPreferences.setTargetLanguageCode(context, targetCode)
+                        onLanguageChanged()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(contentHeight)
+                        .padding(
+                            vertical = KeyboardDimensions.keyboardVerticalPadding,
+                            horizontal = KeyboardDimensions.keyboardHorizontalPadding
+                        )
+                )
+            } else {
+                Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(contentHeight)
                     .padding(
                         vertical = KeyboardDimensions.keyboardVerticalPadding,
                         horizontal = KeyboardDimensions.keyboardHorizontalPadding
@@ -92,6 +142,7 @@ fun ComposeKeyboardView(
                             )
                         }
                     }
+                }
                 }
             }
         }
