@@ -1,10 +1,9 @@
 package org.example.project.ime
 
+import android.Manifest
 import android.content.Intent
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,20 +15,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Keyboard
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,26 +40,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun KeyboardSetupScreen() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val micPermissionState = rememberPermissionState(Manifest.permission.RECORD_AUDIO)
 
     var isKeyboardEnabled by remember { mutableStateOf(false) }
     var isKeyboardSelected by remember { mutableStateOf(false) }
-    var testText by remember { mutableStateOf("") }
-
     fun checkKeyboardStatus() {
         val imm = context.getSystemService(InputMethodManager::class.java)
         val enabledMethods = imm.enabledInputMethodList
@@ -152,61 +152,34 @@ fun KeyboardSetupScreen() {
                 buttonEnabled = isKeyboardEnabled && !isKeyboardSelected
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Try it out",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
+            SetupStepCard(
+                stepNumber = 3,
+                title = "Mic Permission",
+                description = if (micPermissionState.status.isGranted)
+                    "Microphone permission granted for voice translation."
+                else
+                    "Allow microphone access for voice translation.",
+                isComplete = micPermissionState.status.isGranted,
+                buttonText = if (micPermissionState.status.isGranted) "Granted" else "Allow",
+                onButtonClick = { micPermissionState.launchPermissionRequest() },
+                buttonEnabled = !micPermissionState.status.isGranted,
+                icon = Icons.Default.Mic
             )
 
-            BasicTextField(
-                value = testText,
-                onValueChange = { testText = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp)
-                    .border(
-                        width = 1.dp,
-                        color = if (isKeyboardSelected)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.outline,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(16.dp),
-                textStyle = TextStyle(
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                decorationBox = { innerTextField ->
-                    if (testText.isEmpty()) {
-                        Text(
-                            text = "Tap here to type with your custom keyboard...",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            fontSize = 16.sp
-                        )
-                    }
-                    innerTextField()
-                }
-            )
+            Spacer(modifier = Modifier.height(12.dp))
 
-            if (testText.isNotEmpty()) {
-                OutlinedButton(
-                    onClick = { testText = "" },
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Text("Clear")
-                }
-            }
+            SetupStepCard(
+                stepNumber = 4,
+                title = "Translation Languages",
+                description = "Tap the translate icon on the keyboard toolbar to switch source and target languages.",
+                isComplete = true,
+                buttonText = "Available",
+                onButtonClick = {},
+                buttonEnabled = false,
+                icon = Icons.Default.Translate
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -221,7 +194,8 @@ private fun SetupStepCard(
     isComplete: Boolean,
     buttonText: String,
     onButtonClick: () -> Unit,
-    buttonEnabled: Boolean
+    buttonEnabled: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -244,7 +218,7 @@ private fun SetupStepCard(
                 imageVector = if (isComplete)
                     Icons.Default.CheckCircle
                 else
-                    Icons.Default.Error,
+                    icon ?: Icons.Default.Error,
                 contentDescription = null,
                 modifier = Modifier.size(32.dp),
                 tint = if (isComplete)
@@ -292,3 +266,5 @@ private fun SetupStepCard(
         }
     }
 }
+
+
