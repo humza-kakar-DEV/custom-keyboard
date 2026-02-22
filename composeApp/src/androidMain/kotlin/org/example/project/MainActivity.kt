@@ -56,7 +56,7 @@ import com.google.mlkit.nl.translate.TranslateLanguage
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
-import org.example.project.ime.KeyboardSetupScreen
+import org.example.project.navigation.AppNavGraph
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                KeyboardSetupScreen()
+                AppNavGraph()
             }
         }
     }
@@ -286,7 +286,7 @@ fun TranslationApp() {
                 }
 
                 Text(
-                    text = "→",
+                    text = "\u2192",
                     style = MaterialTheme.typography.headlineMedium
                 )
 

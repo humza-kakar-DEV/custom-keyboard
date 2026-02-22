@@ -16,6 +16,9 @@ object KeyboardColors {
     val shiftActiveColor = Color(0xFF1A73E8)
     val enterKeyBackground = Color(0xFF1A73E8)
     val enterKeyTextColor = Color.White
+    val toolbarBackground = Color(0xFFE8EBED)
+    val toolbarIconColor = Color(0xFF5F6368)
+    val toolbarIconActiveColor = Color(0xFF1A73E8)
 }
 
 object KeyboardDimensions {
@@ -29,6 +32,8 @@ object KeyboardDimensions {
     val keyboardVerticalPadding = 6.dp
     val keyboardHorizontalPadding = 3.dp
     val keyShadowElevation = 1.dp
+    val toolbarHeight = 44.dp
+    val toolbarIconSize = 24.dp
 }
 
 @Composable

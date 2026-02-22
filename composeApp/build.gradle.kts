@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.mlkit.language.id)
             implementation(libs.accompanist.permissions)
 
+            implementation(libs.androidx.navigation.compose)
             implementation(libs.androidx.lifecycle.runtime.ktx)
             implementation(libs.androidx.lifecycle.viewmodel.ktx)
             implementation(libs.androidx.savedstate.ktx)
