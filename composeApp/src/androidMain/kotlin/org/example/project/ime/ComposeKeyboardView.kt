@@ -12,7 +12,9 @@ import androidx.compose.ui.Modifier
 
 @Composable
 fun ComposeKeyboardView(
-    onKeyPress: (KeyAction) -> Unit
+    toolbarState: ToolbarState,
+    onKeyPress: (KeyAction) -> Unit,
+    onMicClick: () -> Unit
 ) {
     val keyboardState = remember { KeyboardState() }
 
@@ -28,7 +30,10 @@ fun ComposeKeyboardView(
                 .fillMaxWidth()
                 .background(KeyboardColors.keyboardBackground)
         ) {
-            KeyboardToolbar()
+            KeyboardToolbar(
+                toolbarState = toolbarState,
+                onMicClick = onMicClick
+            )
 
             Column(
                 modifier = Modifier

@@ -4,6 +4,8 @@ import android.inputmethodservice.InputMethodService
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -32,10 +34,19 @@ class ComposeKeyboardService : InputMethodService(),
     override val savedStateRegistry: SavedStateRegistry
         get() = savedStateRegistryController.savedStateRegistry
 
+    private var translationManager: KeyboardTranslationManager? = null
+
     override fun onCreate() {
         super.onCreate()
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+
+        translationManager = KeyboardTranslationManager(
+            context = this,
+            onTranslationResult = { translatedText ->
+                currentInputConnection?.commitText(translatedText, 1)
+            }
+        )
     }
 
     override fun onCreateInputView(): View {
@@ -48,10 +59,15 @@ class ComposeKeyboardService : InputMethodService(),
         decorView.setViewTreeSavedStateRegistryOwner(this)
 
         val composeView = ComposeView(this)
+        val manager = translationManager!!
 
         composeView.setContent {
+            val toolbarState by manager.toolbarState.collectAsState()
+
             ComposeKeyboardView(
-                onKeyPress = { action -> handleKeyAction(action) }
+                toolbarState = toolbarState,
+                onKeyPress = { action -> handleKeyAction(action) },
+                onMicClick = { manager.onMicClick() }
             )
         }
 
@@ -101,6 +117,8 @@ class ComposeKeyboardService : InputMethodService(),
 
     override fun onDestroy() {
         super.onDestroy()
+        translationManager?.destroy()
+        translationManager = null
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         store.clear()
