@@ -27,9 +27,7 @@ kotlin {
     
     sourceSets {
         androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
-            implementation(libs.material.icons.extended)
 
             implementation(libs.mlkit.translate)
             implementation(libs.mlkit.language.id)
@@ -46,7 +44,6 @@ kotlin {
             implementation(libs.compose.material3)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
         }
@@ -57,11 +54,11 @@ kotlin {
 }
 
 android {
-    namespace = "com.kakar.customkeyboard"
+    namespace = "com.mubashir.customkeyboard"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.kakar.customkeyboard"
+        applicationId = "com.mubashir.customkeyboard"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -74,7 +71,19 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        getByName("debug") {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            ndk {
+                abiFilters.addAll(listOf("arm64-v8a", "armeabi-v7a"))
+            }
         }
     }
     compileOptions {
@@ -84,6 +93,5 @@ android {
 }
 
 dependencies {
-    debugImplementation(libs.compose.uiTooling)
 }
 

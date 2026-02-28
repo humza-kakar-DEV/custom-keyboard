@@ -1,4 +1,4 @@
-package com.kakar.customkeyboard
+package com.mubashir.customkeyboard
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
