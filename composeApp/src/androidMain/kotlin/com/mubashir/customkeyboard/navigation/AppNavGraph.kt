@@ -9,6 +9,10 @@ import com.mubashir.customkeyboard.ime.KeyboardSetupScreen
 import com.mubashir.customkeyboard.ime.OnboardingPreferences
 import com.mubashir.customkeyboard.ime.OnboardingScreen
 import com.mubashir.customkeyboard.translation.DeepLinkTranslationScreen
+import com.mubashir.customkeyboard.translation.TranslationViewModel
+import android.content.Intent
+import android.app.Activity
+import androidx.compose.runtime.remember
 
 object Routes {
     const val ONBOARDING = "onboarding"
@@ -17,14 +21,19 @@ object Routes {
 }
 
 @Composable
-fun AppNavGraph() {
+fun AppNavGraph(translationViewModel: TranslationViewModel) {
     val context = LocalContext.current
     val navController = rememberNavController()
 
-    val startDestination = if (OnboardingPreferences.isOnboardingCompleted(context)) {
-        Routes.DEEP_LINK_TRANSLATION
-    } else {
-        Routes.ONBOARDING
+    val startDestination = remember {
+        val intent = (context as? Activity)?.intent
+        if (intent?.action == Intent.ACTION_PROCESS_TEXT) {
+            Routes.DEEP_LINK_TRANSLATION
+        } else if (OnboardingPreferences.isOnboardingCompleted(context)) {
+            Routes.DEEP_LINK_TRANSLATION
+        } else {
+            Routes.ONBOARDING
+        }
     }
 
     NavHost(
@@ -46,7 +55,7 @@ fun AppNavGraph() {
         }
 
         composable(Routes.DEEP_LINK_TRANSLATION) {
-            DeepLinkTranslationScreen()
+            DeepLinkTranslationScreen(viewModel = translationViewModel)
         }
     }
 }

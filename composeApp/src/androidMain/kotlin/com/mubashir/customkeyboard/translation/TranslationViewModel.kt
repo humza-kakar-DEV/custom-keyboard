@@ -93,6 +93,8 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
         _uiState.update { it.copy(isModelReady = false) }
     }
 
+    private var onApplyTranslation: ((String) -> Unit)? = null
+
     fun setSourceLanguage(language: Language) {
         _uiState.update { it.copy(sourceLanguage = language, isModelReady = false) }
         initTranslator()
@@ -105,6 +107,21 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
 
     fun setRecognizedText(text: String) {
         _uiState.update { it.copy(recognizedText = text) }
+    }
+
+    fun handleProcessTextIntent(text: String, onApply: (String) -> Unit) {
+        _uiState.update { it.copy(recognizedText = text) }
+        onApplyTranslation = onApply
+        if (text.isNotBlank()) {
+            translateManual()
+        }
+    }
+
+    fun applyTranslation() {
+        val translated = _uiState.value.translatedText
+        if (translated.isNotBlank()) {
+            onApplyTranslation?.invoke(translated)
+        }
     }
 
     fun swapLanguages() {

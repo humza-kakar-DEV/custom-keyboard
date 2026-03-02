@@ -143,10 +143,11 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
 
             // Apply Button
             Button(
-                onClick = { /* No functionality yet */ },
+                onClick = { viewModel.applyTranslation() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
+                enabled = uiState.translatedText.isNotBlank(),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary
