@@ -103,6 +103,51 @@ class TranslationViewModel(application: Application) : AndroidViewModel(applicat
         initTranslator()
     }
 
+    fun setRecognizedText(text: String) {
+        _uiState.update { it.copy(recognizedText = text) }
+    }
+
+    fun swapLanguages() {
+        val currentState = _uiState.value
+        _uiState.update {
+            it.copy(
+                sourceLanguage = currentState.targetLanguage,
+                targetLanguage = currentState.sourceLanguage,
+                recognizedText = currentState.translatedText,
+                translatedText = currentState.recognizedText,
+                isModelReady = false
+            )
+        }
+        initTranslator()
+    }
+
+    fun translateManual() {
+        val text = _uiState.value.recognizedText
+        if (text.isBlank()) return
+
+        _uiState.update { it.copy(errorMessage = "") }
+
+        if (_uiState.value.isModelReady) {
+            translateText(text)
+            return
+        }
+
+        _uiState.update { it.copy(isModelDownloading = true) }
+        translator?.downloadModelIfNeeded()
+            ?.addOnSuccessListener {
+                _uiState.update { it.copy(isModelReady = true, isModelDownloading = false) }
+                translateText(text)
+            }
+            ?.addOnFailureListener { e ->
+                _uiState.update {
+                    it.copy(
+                        isModelDownloading = false,
+                        errorMessage = "Failed to download translation model: ${e.message}"
+                    )
+                }
+            }
+    }
+
     fun downloadModelAndStartListening() {
         _uiState.update { it.copy(errorMessage = "") }
 
