@@ -139,6 +139,27 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Apply Button
+            Button(
+                onClick = { /* No functionality yet */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Text(
+                    text = "Apply",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondary
+                )
+            }
+
             if (uiState.errorMessage.isNotEmpty()) {
                 Card(
                     colors = CardDefaults.cardColors(
