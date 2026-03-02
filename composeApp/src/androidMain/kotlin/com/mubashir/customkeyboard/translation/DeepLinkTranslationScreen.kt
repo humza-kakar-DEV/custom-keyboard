@@ -57,7 +57,7 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
                 onValueChange = { viewModel.setRecognizedText(it) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 160.dp),
+                    .heightIn(min = 120.dp),
                 label = { Text("Source Text") },
                 placeholder = { Text("Type something here...") },
                 minLines = 5,
@@ -70,7 +70,7 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
             IconButton(
                 onClick = { viewModel.swapLanguages() },
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer)
             ) {
@@ -98,7 +98,7 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
                 onValueChange = { },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 160.dp),
+                    .heightIn(min = 60.dp),
                 label = { Text("Translation") },
                 readOnly = true,
                 minLines = 5,
@@ -112,7 +112,7 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
                 onClick = { viewModel.translateManual() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(50.dp),
                 enabled = uiState.recognizedText.isNotEmpty() && !uiState.isTranslating && !uiState.isModelDownloading,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -146,7 +146,7 @@ fun DeepLinkTranslationScreen(viewModel: TranslationViewModel = viewModel()) {
                 onClick = { viewModel.applyTranslation() },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(50.dp),
                 enabled = uiState.translatedText.isNotBlank(),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
